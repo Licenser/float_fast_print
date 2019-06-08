@@ -1,12 +1,11 @@
 #[inline]
 pub fn print_64(v: &mut u64, dst: &mut [u8]) -> usize {
-
     // This is slightly faster than a loop.
     // The average output length is 16.38 digits, so we check high-to-low.
     // Function precondition: v is not an 18, 19, or 20-digit number.
     // (17 digits are sufficient for round-tripping.)
     debug_assert!(*v < 100000000000000000u64);
-    unsafe{
+    unsafe {
         if *v >= 10000000000000000u64 {
             *dst.get_unchecked_mut(16) = b'0' + ((*v % 10) as u8);
             *v /= 10;
@@ -42,8 +41,7 @@ pub fn print_64(v: &mut u64, dst: &mut [u8]) -> usize {
             *v /= 10;
             *dst.get_unchecked_mut(0) = b'0' + (*v as u8);
             17
-        }
-        else if *v >= 1000000000000000u64 {
+        } else if *v >= 1000000000000000u64 {
             *dst.get_unchecked_mut(15) = b'0' + ((*v % 10) as u8);
             *v /= 10;
             *dst.get_unchecked_mut(14) = b'0' + ((*v % 10) as u8);
@@ -76,8 +74,7 @@ pub fn print_64(v: &mut u64, dst: &mut [u8]) -> usize {
             *v /= 10;
             *dst.get_unchecked_mut(0) = b'0' + (*v as u8);
             16
-        }
-        else if *v >= 100000000000000u64 {
+        } else if *v >= 100000000000000u64 {
             *dst.get_unchecked_mut(14) = b'0' + ((*v % 10) as u8);
             *v /= 10;
             *dst.get_unchecked_mut(13) = b'0' + ((*v % 10) as u8);
@@ -212,8 +209,7 @@ pub fn print_64(v: &mut u64, dst: &mut [u8]) -> usize {
             *v /= 10;
             *dst.get_unchecked_mut(0) = b'0' + (*v as u8);
             11
-        }
-        else if *v >= 1000000000u64 {
+        } else if *v >= 1000000000u64 {
             *dst.get_unchecked_mut(9) = b'0' + ((*v % 10) as u8);
             *v /= 10;
             *dst.get_unchecked_mut(8) = b'0' + ((*v % 10) as u8);
@@ -343,7 +339,7 @@ pub fn print_32(v: &mut u32, dst: &mut [u8]) -> u32 {
     // (9 digits are sufficient for round-tripping.)
     debug_assert!(*v < 1000000000);
 
-    unsafe{
+    unsafe {
         if *v >= 100000000 {
             *dst.get_unchecked_mut(8) = b'0' + ((*v % 10) as u8);
             *v /= 10;
