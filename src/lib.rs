@@ -1,5 +1,7 @@
 #![cfg_attr(feature = "cargo-clippy", allow(unreadable_literal))]
 
+mod unroll;
+
 use std::io::{Write,Result};
 //use std::fmt::{LowerExp, UpperExp, Display, Debug};
 
@@ -131,12 +133,12 @@ fn mul_shift_64( m: u64, mul: (u64,u64), shift: u32 ) -> u64 {
 
 #[inline]
 fn mul_pow5_inv_div_pow2(m: u32, q: u32, j: u32 ) -> u32 {
-    mul_shift_32(m, F32_POW5_INV_SPLIT[q as usize], j)
+    mul_shift_32(m, unsafe{*F32_POW5_INV_SPLIT.get_unchecked(q as usize)}, j)
 }
 
 #[inline]
 fn mul_pow5_div_pow2(m: u32, i: u32, j: u32 ) -> u32 {
-    mul_shift_32(m, F32_POW5_SPLIT[i as usize], j)
+    mul_shift_32(m, unsafe{*F32_POW5_SPLIT.get_unchecked(i as usize)}, j)
 }
 
 #[inline]
@@ -502,7 +504,7 @@ pub fn write_f64_shortest<W: Write>(mut writer: W, num: f64 ) -> Result<usize> {
         let k: i32 = ( F64_POW5_INV_BIT_COUNT + pow5_bits(q as u32 )) as i32 - 1;
         let i: i32 = -e2 + q + k;
 
-        let mul = DOUBLE_POW5_INV_SPLIT[q as usize];
+        let mul = unsafe{*DOUBLE_POW5_INV_SPLIT.get_unchecked(q as usize)};
         vr = mul_shift_64(4 * m2,                mul, i as u32);
         vp = mul_shift_64(4 * m2 + 2,            mul, i as u32);
         vm = mul_shift_64(4 * m2 - 1 - mm_shift, mul, i as u32);
@@ -526,7 +528,7 @@ pub fn write_f64_shortest<W: Write>(mut writer: W, num: f64 ) -> Result<usize> {
         let k: i32 = pow5_bits(i as u32 ) as i32 - F64_POW5_BIT_COUNT;
         let j: i32 = q - k;
 
-        let mul = DOUBLE_POW5_SPLIT[i as usize];
+        let mul = unsafe{*DOUBLE_POW5_SPLIT.get_unchecked(i as usize)};
         vr = mul_shift_64(4 * m2,                       mul, j as u32);
         vp = mul_shift_64(4 * m2 + 2,                   mul, j as u32);
         vm = mul_shift_64(4 * m2 - 1 - mm_shift as u64, mul, j as u32);
@@ -601,56 +603,53 @@ pub fn write_f64_shortest<W: Write>(mut writer: W, num: f64 ) -> Result<usize> {
         output = vr + ( (vr == vm) || (last_removed_digit >= 5)) as u64;
     }
     // The average output length is 16.38 digits.
-    let o_length: usize =  decimal_length_64(output) as usize;
-    let vp_length: usize =  o_length + removed;
-    let mut exp: i32 = e10 + vp_length as i32 - 1;
+    //let o_length: usize =  decimal_length_64(output) as usize;
 
     // Step 5: Print the decimal representation.
-    let mut result: [u8;24] = [0; 24]; // the longest required is apparently: -2.2250738585072020E−308
+    let mut result: [u8;24] = unsafe{std::mem::uninitialized()}; // the longest required is apparently: -2.2250738585072020E−308
     let mut index: usize = 0;
     if sign {
-        result[index] = b'-';
+        unsafe{*result.get_unchecked_mut(index) = b'-'};
         index += 1;
     }
 
     // Print decimal digits after the decimal point.
-    for i in 0 .. o_length - 1 {
-        let c = output % 10;
-        output /= 10;
-        result[index + o_length - i] = b'0' + c as u8;
-    }
+    let o_length: usize = unsafe{unroll::print_64(&mut output, result.get_unchecked_mut(index+1 ..)) as usize};
+    let vp_length: usize =  o_length + removed;
+    let mut exp: i32 = e10 + vp_length as i32 - 1;
+
     // Print the leading decimal digit.
-    result[index] = b'0' + ( output % 10 ) as u8;
+    unsafe{*result.get_unchecked_mut(index) = b'0' + ( output % 10 ) as u8};
 
     // Print decimal point if needed.
     if o_length > 1 {
-        result[index + 1] = b'.';
+        unsafe{*result.get_unchecked_mut(index + 1) = b'.'};
         index += o_length + 1;
     } else {
         index += 1;
     }
 
     // Print the exponent.
-    result[index] = b'e';
+    unsafe{*result.get_unchecked_mut(index) = b'e';}
     index += 1;
     if exp < 0 {
-        result[index] = b'-';
+        unsafe{*result.get_unchecked_mut(index) = b'-'};
         index += 1;
         exp = -exp;
     }
 
     if exp >= 100 {
-        result[index] = b'0' + ( exp / 100 ) as u8;
+        unsafe{*result.get_unchecked_mut(index) = b'0' + ( exp / 100 ) as u8};
         index += 1;
     }
     if exp >= 10 {
-        result[index] = b'0' + ((exp / 10) % 10) as u8;
+        unsafe{*result.get_unchecked_mut(index) = b'0' + ((exp / 10) % 10) as u8};
         index += 1;
     }
-    result[index] = b'0' + ( exp % 10 ) as u8;
+    unsafe{*result.get_unchecked_mut(index) = b'0' + ( exp % 10 ) as u8};
     index += 1;
     
-    writer.write(&result[0..index] )
+    writer.write(unsafe{result.get_unchecked(0..index)} )
 }
 
 const F32_POW5_INV_SPLIT: [u64;31] = [
@@ -1078,4 +1077,14 @@ mod tests {
         f64_test_roundtrip(std::f64::EPSILON);
         f64_test_roundtrip(std::f64::MIN_POSITIVE);
     }
+
+    #[test]
+    fn f64_cases() {
+        f64_test_text(1234.5678, "1.2345678e3");
+        f64_test_text(10.0, "1e1");
+        f64_test_text(-10.0, "-1e1");
+        f64_test_text(-10.01, "-1.001e1");
+        f64_test_text(10.01, "1.001e1");
+    }
+
 }

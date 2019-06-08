@@ -1,4 +1,3 @@
-#![feature(test)]
 extern crate float_fast_print;
 extern crate rand;
 
