@@ -1,5 +1,5 @@
 #[inline]
-pub fn print_64(v: &mut u64, dst: &mut [u8]) -> u32 {
+pub fn print_64(v: &mut u64, dst: &mut [u8]) -> usize {
 
     // This is slightly faster than a loop.
     // The average output length is 16.38 digits, so we check high-to-low.
@@ -326,6 +326,116 @@ pub fn print_64(v: &mut u64, dst: &mut [u8]) -> u32 {
             *dst.get_unchecked_mut(0) = b'0' + (*v as u8);
             3
         } else if *v >= 10u64 {
+            *dst.get_unchecked_mut(1) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(0) = b'0' + (*v as u8);
+            2
+        } else {
+            *dst.get_unchecked_mut(0) = b'0' + (*v as u8);
+            1
+        }
+    }
+}
+
+#[inline]
+pub fn print_32(v: &mut u32, dst: &mut [u8]) -> u32 {
+    // Function precondition: v is not a 10-digit number.
+    // (9 digits are sufficient for round-tripping.)
+    debug_assert!(*v < 1000000000);
+
+    unsafe{
+        if *v >= 100000000 {
+            *dst.get_unchecked_mut(8) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(7) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(6) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(5) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(4) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(3) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(2) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(1) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(0) = b'0' + (*v as u8);
+            9
+        } else if *v >= 10000000 {
+            *dst.get_unchecked_mut(7) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(6) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(5) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(4) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(3) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(2) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(1) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(0) = b'0' + (*v as u8);
+            8
+        } else if *v >= 1000000 {
+            *dst.get_unchecked_mut(6) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(5) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(4) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(3) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(2) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(1) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(0) = b'0' + (*v as u8);
+            7
+        } else if *v >= 100000 {
+            *dst.get_unchecked_mut(5) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(4) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(3) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(2) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(1) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(0) = b'0' + (*v as u8);
+            6
+        } else if *v >= 10000 {
+            *dst.get_unchecked_mut(4) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(3) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(2) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(1) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(0) = b'0' + (*v as u8);
+            5
+        } else if *v >= 1000 {
+            *dst.get_unchecked_mut(3) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(2) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(1) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(0) = b'0' + (*v as u8);
+            4
+        } else if *v >= 100 {
+            *dst.get_unchecked_mut(2) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(1) = b'0' + ((*v % 10) as u8);
+            *v /= 10;
+            *dst.get_unchecked_mut(0) = b'0' + (*v as u8);
+            3
+        } else if *v >= 10 {
             *dst.get_unchecked_mut(1) = b'0' + ((*v % 10) as u8);
             *v /= 10;
             *dst.get_unchecked_mut(0) = b'0' + (*v as u8);

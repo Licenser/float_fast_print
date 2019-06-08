@@ -141,51 +141,6 @@ fn mul_pow5_div_pow2(m: u32, i: u32, j: u32 ) -> u32 {
     mul_shift_32(m, unsafe{*F32_POW5_SPLIT.get_unchecked(i as usize)}, j)
 }
 
-#[inline]
-fn decimal_length_32(v: u32 ) -> u32 {
-    // Function precondition: v is not a 10-digit number.
-    // (9 digits are sufficient for round-tripping.)
-    debug_assert!(v < 1000000000);
-    
-    if      v >= 100000000 { 9 }
-    else if v >= 10000000 { 8 }
-    else if v >= 1000000 { 7 }
-    else if v >= 100000 { 6 }
-    else if v >= 10000 { 5 }
-    else if v >= 1000 { 4 }
-    else if v >= 100 { 3 }
-    else if v >= 10 { 2 }
-    else           { 1 }
-}
-
-#[inline]
-fn decimal_length_64(v: u64) -> u32 {
-
-    // This is slightly faster than a loop.
-    // The average output length is 16.38 digits, so we check high-to-low.
-    // Function precondition: v is not an 18, 19, or 20-digit number.
-    // (17 digits are sufficient for round-tripping.)
-    debug_assert!(v < 100000000000000000u64);
-
-    if      v >= 10000000000000000u64 { 17 }
-    else if v >= 1000000000000000u64 { 16 }
-    else if v >= 100000000000000u64 { 15 }
-    else if v >= 10000000000000u64 { 14 }
-    else if v >= 1000000000000u64 { 13 }
-    else if v >= 100000000000u64 { 12 }
-    else if v >= 10000000000u64 { 11 }
-    else if v >= 1000000000u64 { 10 }
-    else if v >= 100000000u64 { 9 }
-    else if v >= 10000000u64 { 8 }
-    else if v >= 1000000u64 { 7 }
-    else if v >= 100000u64 { 6 }
-    else if v >= 10000u64 { 5 }
-    else if v >= 1000u64 { 4 }
-    else if v >= 100u64 { 3 }
-    else if v >= 10u64 { 2 }
-    else              { 1 }
-}
-
 /// Converts the given `f32` number to a short round-trip base-10 representation
 /// using the efficient Ryū algorithm by Ulf Adams.
 ///
@@ -364,45 +319,39 @@ pub fn write_f32_shortest<W: Write>(mut writer: W, num: f32 ) -> Result<usize> {
         // We need to take vr+1 if vr is outside bounds or we need to round up.
         output = vr + (vr == vm || last_removed_digit >= 5) as u32;
     }
-    let o_length: u32 = decimal_length_32(output);
-    let vp_length: u32 = o_length + removed;
-
-    let mut exp: i32 = ( e10 + vp_length  as i32 ) - 1;
 
     // Step 5: Print the decimal representation.
     let mut index: usize = 0;
-    let mut result: [u8;24] = [0; 24];
+    let mut result: [u8;24] = unsafe{std::mem::uninitialized()};
 
     if sign {
-        result[index] = b'-';
+        unsafe{*result.get_unchecked_mut(index) = b'-'};
         index += 1;
     }
 
     // @@@ Removed DIGIT_TABLE optimisation
 
-    // Print decimal digits after the decimal point.
-    for i in 0 .. o_length as usize - 1 {
-        let c = ( output % 10 ) as u8;
-        output /= 10;
-        result[index + o_length as usize - i] = b'0' + c;
-    }
+    let o_length: u32 = unsafe{unroll::print_32(&mut output, result.get_unchecked_mut(index+1 ..)) };
+    let vp_length: u32 = o_length + removed;
+
+    let mut exp: i32 = ( e10 + vp_length  as i32 ) - 1;
 
     // Print the leading decimal digit.
-    result[index] = b'0' + ( output % 10 ) as u8;
+    unsafe{*result.get_unchecked_mut(index) = b'0' + ( output % 10 ) as u8};
 
     // Print decimal point if needed.
     if o_length > 1 {
-        result[index + 1] = b'.';
+        unsafe{*result.get_unchecked_mut(index + 1) = b'.'};
         index += o_length as usize + 1;
     } else {
         index += 1;
     }
 
     // Print the exponent.
-    result[index] = b'e';
+    unsafe{*result.get_unchecked_mut(index) = b'e'};
     index += 1;
     if exp < 0 {
-        result[index] = b'-';
+        unsafe{*result.get_unchecked_mut(index) = b'-'};
         index += 1;
         exp = -exp;
     }
@@ -410,13 +359,13 @@ pub fn write_f32_shortest<W: Write>(mut writer: W, num: f32 ) -> Result<usize> {
     // @@@ Removed DIGIT_TABLE optimisation
 
     if exp >= 10 {
-        result[index] = b'0' + ( (exp / 10) % 10 ) as u8;
+        unsafe{*result.get_unchecked_mut(index) = b'0' + ( (exp / 10) % 10 ) as u8};
         index += 1;
     }
-    result[index] = b'0' + ( exp % 10 ) as u8;
+    unsafe{*result.get_unchecked_mut(index) = b'0' + ( exp % 10 ) as u8};
     index += 1;
 
-    writer.write(&result[0..index] )
+    writer.write(unsafe{result.get_unchecked(0..index)} )
 }
 
 /// Converts the given `f32` number to a short round-trip base-10 representation
